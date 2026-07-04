@@ -1,0 +1,1678 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VBE Chemijos indų ir tūrio matavimo simuliatorius</title>
+    <!-- Tailwind CSS для стилей -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React и ReactDOM (версия UMD для работы в браузере) -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <!-- Babel для компиляции JSX "на лету" -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    keyframes: {
+                        'fade-in': {
+                            '0%': { opacity: '0', transform: 'translateY(4px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' }
+                        }
+                    },
+                    animation: {
+                        'fade-in': 'fade-in 0.2s ease-out'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Встроенные SVG-иконки с жестко заданными дефолтными размерами (width/height) для защиты от раздувания
+        const CompassIcon = () => (
+            <svg className="h-6 w-6 text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" width="24" height="24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+        );
+
+        const BookOpenIcon = ({ className = "h-5 w-5" }) => (
+            <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+        );
+
+        const LayersIcon = ({ className = "h-5 w-5" }) => (
+            <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+        );
+
+        const DropletIcon = ({ className = "h-5 w-5" }) => (
+            <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+            </svg>
+        );
+
+        const HelpCircleIcon = ({ className = "h-5 w-5" }) => (
+            <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        );
+
+        const GlobeIcon = ({ className = "h-5 w-5" }) => (
+            <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+            </svg>
+        );
+
+        const InfoIcon = ({ className = "h-5 w-5" }) => (
+            <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        );
+
+        const AwardIcon = ({ className = "h-5 w-5" }) => (
+            <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5a2 2 0 10-2 2h2zm0 0h4l-1 3H9l-1-3h4z" />
+            </svg>
+        );
+
+        const RefreshCwIcon = ({ className = "h-5 w-5" }) => (
+            <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H17" />
+            </svg>
+        );
+
+        const CheckCircleIcon = ({ className = "h-5 w-5" }) => (
+            <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        );
+
+        const AlertCircleIcon = ({ className = "h-5 w-5" }) => (
+            <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+        );
+
+        const ChevronRightIcon = ({ className = "h-5 w-5" }) => (
+            <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+        );
+
+        const translations = {
+          LT: {
+            title: "VBE Chemijos indų ir tūrio matavimo simuliatorius",
+            subtitle: "Pasiruošimas valstybiniam brandos egzaminui (VBE)",
+            tabTheory: "Teorija ir Taisyklės",
+            tabScale: "Skalių treniruoklis",
+            tabTitration: "Titravimo laboratorija",
+            tabQuiz: "VBE Testas",
+            
+            theoryTitle: "Matavimo indų klasifikacija ir taisyklingas nuskaitymas",
+            theoryIntro: "VBE egzamine reikalaujama žinoti tiksliuosius ir apytikslius indus, taisyklingai nustatyti skysčio tūrį pagal žemiausią įgaubto menisko tašką ir įvertinti paklaidas.",
+            glasswareType: "Indų tipas",
+            glasswareExact: "Tikslieji indai (naudojami analitiniam tikslumui)",
+            glasswareApprox: "Apytiksliai indai (reagentų paruošimui, apytiksliam matavimui)",
+            meniscusRuleTitle: "Svarbiausia taisyklė: Apatinis meniskas (Apatinis meniskas)",
+            meniscusRuleText: "Skaidriems tirpalams tūris visada nuskaitomas pagal žemiausią įgaubto menisko tašką (apatinį kraštą) akių lygyje. Tai padeda visiškai išvengti paralakso paklaidos.",
+            parallaxError: "Paralakso paklaidos analizė (bendraašis spindulys):",
+            parallaxHigh: "Žiūrint iš viršaus: tūris atrodo didesnis (biuretėje rodmuo didesnis, nes skalė didėja žemyn).",
+            parallaxLow: "Žiūrint iš apačios: tūris atrodo mažesnis (biuretėje rodmuo mažesnis).",
+            parallaxEye: "Akių lygyje ties apatiniu menisko kraštu: teisingas rezultatas!",
+            vbeTipTitle: "Svarbus VBE patarimas dabar!",
+            vbeTipText: "Biuretės skalė prasideda nuo 0 viršuje ir didėja žemyn. Rezultatas biuretėje visada turi būti užrašomas su dviejų skaitmenų po kablelio tikslumu (pvz., 12.40 mL, o ne 12.4 mL!).",
+
+            scaleTrainerTitle: "Menisko nuskaitymo treniruoklis",
+            scaleTrainerSubtitle: "Išmokite tiksliai nuskaityti tūrį iš skirtingų indų pagal apatinį menisko kraštą. Atkreipkite dėmesį į skalės kryptį!",
+            selectGlassware: "Pasirinkite indą:",
+            buretteName: "Biuretė (skalė iš viršaus į apačią, tikslumas 0.01 mL)",
+            cylinderName: "Matavimo cilindras (skalė iš apačios į viršų, tikslumas 0.1 mL)",
+            glasswareBurette: "Biuretė (50 mL)",
+            glasswareCylinder: "Matavimo cilindras (100 mL)",
+            targetVolume: "Nustatykite tūrį pagal APATINĮ menisko kraštą (mL):",
+            enterVolume: "Įveskite nuskaitytą tūrį (mL):",
+            checkAnswer: "Tikrinti atsakymą",
+            nextLevel: "Kitas bandymas",
+            correctMsg: "Puiku! Teisingas atsakymas. Tikslus tūris pagal apatinį kraštą yra ",
+            almostCorrectMsg: "Labai arti! Priimtina paklaida. Tikslus tūris yra ",
+            wrongMsg: "Neteisingai. Pabandykite dar kartą. Atkreipkite dėmesį į apatinį menisko tašką! Tikslus tūris yra ",
+            explanationTitle: "Paaiškinimas VBE egzaminui:",
+            scaleDirection: "Skalės kryptis:",
+            scaleUp: "iš apačios į viršų (skaičiai didėja kylant aukštyn).",
+            scaleDown: "iš viršaus į apačią (skaičiai didėja leidžiantis žemyn). Tai dažna egzamino klaida!",
+            estimatedDigit: "Įvertinamasis skaitmuo:",
+            estimatedDigitBurette: "biuretėje padalos vertė yra 0.1 mL, todėl paskutinį skaitmenį (šimtąsias dalis, pvz., 0.05 mL) nustatome „iš akies“.",
+            estimatedDigitCylinder: "cilindro padalos vertė yra 1 mL, todėl dešimtąsias dalis (pvz., 0.5 mL) nustatome „iš akies“.",
+
+            titrationTitle: "Interaktyvi titravimo laboratorija (VBE Praktika)",
+            titrationIntro: "Atlikite rūgšties ir šarmo titravimą. Tikslas: nustatyti nežinomą HCl tirpalo koncentraciją, titruojant jį 0.100 M NaOH tirpalu. Skaitykite tūrį pagal apatinį menisko kraštą!",
+            step1: "1 Žingsnis: Įpilkite 10.00 mL HCl su vienžyme pipete (Moro pipete).",
+            step1Done: "Į pipetę pritraukta 10.00 mL HCl rūgšties ir pernešta į kūginę kolbą.",
+            step2: "2 Žingsnis: Įlašinkite indikatoriaus (fenolftaleino).",
+            step2Done: "Įlašinti 3 lašai fenolftaleino. Tirpalas kolboje yra bespalvis.",
+            step3: "3 Žingsnis: Užpildykite biuretę 0.100 M NaOH tirpalu iki 0.00 mL žymos.",
+            step3Done: "Biuretė užpildyta iki 0.00 mL.",
+            step4: "4 Žingsnis: Titruokite iki ekvivalentinio taško (šviesiai rausvos spalvos).",
+            titrateBtn: "Lašinti NaOH (greitai)",
+            titrateDropBtn: "Lašinti po lašą (tiksliai)",
+            resetTitration: "Pradėti iš naujo",
+            addedVolume: "Pridėtas NaOH tūris:",
+            solutionColor: "Tirpalo spalva kolboje:",
+            colorless: "Bespalvis (rūgštinė terpė, pH < 8.2)",
+            lightPink: "Šviesiai rausvas (ekvivalentinis taškas pasiektas! IDEALU!)",
+            magenta: "Ryškiai violetinis / avietinis (pertitruota! Tirpalas per daug šarminis, pH > 10)",
+            endpointReached: "Ekvivalentinis taškas pasiektas! Užfiksuokite NaOH tūrį iš biuretės pagal apatinį menisko kraštą.",
+            calculateTitle: "Koncentracijos skaičiavimas:",
+            calcFormula: "Naudokite formulę: C(HCl) × V(HCl) = C(NaOH) × V(NaOH)",
+            knownValues: "Žinomos vertės: V(HCl) = 10.00 mL, C(NaOH) = 0.100 M",
+            yourReading: "Įveskite jūsų nuskaitytą NaOH tūrį pagal apatinį meniską (mL):",
+            calculatedConc: "Apskaičiuota HCl koncentracija (M):",
+            submitCalculation: "Tikrinti skaičimus",
+            calcSuccess: "Nuostabu! Jūs teisingai atlikote titravimą ir tiksliai apskaičiavote HCl koncentraciją: ",
+            calcWrong: "Skaičiavimas arba tūrio nuskaitymas neteisingas. Patikrinkite tūrį ir formulę dar kartą.",
+
+            quizTitle: "VBE egzamino teorijos testas",
+            quizIntro: "Pasitikrinkite žinias apie laboratorinius indus ir procedūras pagal VBE reikalavimus.",
+            score: "Rezultatas:",
+            questionOf: "Klausimas",
+            correct: "Teisingai!",
+            incorrect: "Neteisingai. Teisingas atsakymas:",
+            explanation: "Paaiškinimas:",
+            nextQuestion: "Kitas klausimas",
+            restartQuiz: "Laikyti testą iš naujo",
+            quizFinished: "Testas baigtas! Jūsų rezultatas: ",
+
+            gBurette: "Biuretė (Biuretė)",
+            gPipette: "Vienžymė (Moro) pipetė (Vienžymė pipetė)",
+            gFlask: "Matavimo kolba (Matavimo kolba)",
+            gCylinder: "Matavimo cilindras (Matavimo cilindras)",
+            gBeaker: "Cheminė stiklinė (Cheminė stiklinė)",
+            gErlenmeyer: "Kūginė kolba (Kūginė kolba)"
+          },
+          RU: {
+            title: "Симулятор мерной посуды и объемов для VBE Литвы",
+            subtitle: "Подготовка к государственному экзамену по химии (VBE)",
+            tabTheory: "Теория и Правила",
+            tabScale: "Тренажер шкал",
+            tabTitration: "Лаборатория титрования",
+            tabQuiz: "Тест VBE",
+            
+            theoryTitle: "Классификация мерной посуды и правила считывания",
+            theoryIntro: "На экзамене VBE требуется четко различать точную и приблизительную посуду, правильно считывать мениск раствора по его нижней точке и оценивать погрешности.",
+            glasswareType: "Тип посуды",
+            glasswareExact: "Точная посуда (для аналитических измерений)",
+            glasswareApprox: "Приблизительная посуда (для приготовления, грубого отмеривания)",
+            meniscusRuleTitle: "Главное правило: Нижний мениск (Apatinis meniskas)",
+            meniscusRuleText: "Для прозрачных растворов объем всегда считывают строго по НИЖНЕМУ вогнутому краю мениска на уровне глаз. Это позволяет полностью избежать погрешности параллакса.",
+            parallaxError: "Анализ погрешности параллакса (на примере бюретки):",
+            parallaxHigh: "Взгляд сверху: луч зрения проецируется ниже, показывая завышенный объем (19.82 мл вместо 19.70 мл).",
+            parallaxLow: "Взгляд снизу: луч зрения проецируется выше, показывая заниженный объем (19.62 мл вместо 19.70 мл).",
+            parallaxEye: "Взгляд строго на уровне нижнего края мениска: абсолютно верный отсчет (19.70 мл)!",
+            vbeTipTitle: "Важная подсказка VBE для бюретки!",
+            vbeTipText: "Шкала бюретки идет сверху вниз (0 вверху). Показания бюретки на VBE всегда записываются с точностью до двух знаков после запятой (например, 12.40 мл, а не 12.4 мл!).",
+
+            scaleTrainerTitle: "Тренажер считывания уровня мениска",
+            scaleTrainerSubtitle: "Научитесь безошибочно определять объем строго по нижней точке мениска. Помните про направление шкалы!",
+            selectGlassware: "Выберите посуду для практики:",
+            buretteName: "Бюретка (шкала сверху вниз, точность до 0.01 мл)",
+            cylinderName: "Мерный цилиндр (шкала снизу вверх, точность до 0.1 мл)",
+            glasswareBurette: "Бюретка (50 мл)",
+            glasswareCylinder: "Мерный цилиндр (100 мл)",
+            targetVolume: "Определите объем по НИЖНЕМУ краю мениска (мл):",
+            enterVolume: "Введите считанный объем (мл):",
+            checkAnswer: "Проверить ответ",
+            nextLevel: "Следующий уровень",
+            correctMsg: "Отлично! Правильный ответ. Точный объем по нижнему мениску равен ",
+            almostCorrectMsg: "Очень близко! В пределах допустимой погрешности. Точный объем: ",
+            wrongMsg: "Неверно. Попробуйте еще раз. Обращайте внимание на самую нижнюю точку кривой мениска! Правильный объем: ",
+            explanationTitle: "Объяснение для экзамена VBE:",
+            scaleDirection: "Направление шкалы:",
+            scaleUp: "снизу вверх (значения растут кверху).",
+            scaleDown: "сверху вниз (значения растут книзу). Это классическая ловушка экзамена!",
+            estimatedDigit: "Оцениваемая цифра (на глаз):",
+            estimatedDigitBurette: "в бюретке цена деления 0.1 мл, поэтому последнюю цифру (сотые доли, например 0.05 мл) мы определяем примерно.",
+            estimatedDigitCylinder: "в цилиндре цена деления 1 мл, поэтому десятые доли (например 0.5 мл) мы прикидываем визуально.",
+
+            titrationTitle: "Интерактивная лаборатория титрования (Практика VBE)",
+            titrationIntro: "Проведите кислотно-основное титрование. Определите концентрацию HCl, ориентируясь строго по нижнему краю мениска бюретки!",
+            step1: "Шаг 1: Отмерьте 10.00 мл раствора HCl пипеткой Мора (однознаковой).",
+            step1Done: "10.00 мл кислоты HCl набраны пипеткой и перенесены в коническую колбу.",
+            step2: "Шаг 2: Добавьте индикатор (фенолфталеин).",
+            step2Done: "Добавлено 3 капли фенолфталеина. Раствор в колбе остается бесцветным.",
+            step3: "Шаг 3: Заполните бюретку раствором 0.100 M NaOH до отметки 0.00 мл.",
+            step3Done: "Бюретка заполнена раствором NaOH ровно до 0.00 мл.",
+            step4: "Шаг 4: Титруйте до точки эквивалентности (слабо-розовая окраска).",
+            titrateBtn: "Прилить NaOH (быстро)",
+            titrateDropBtn: "Добавить по каплям (точно)",
+            resetTitration: "Начать сначала",
+            addedVolume: "Добавленный объем NaOH:",
+            solutionColor: "Цвет раствора в колбе:",
+            colorless: "Бесцветный (кислая среда, pH < 8.2)",
+            lightPink: "Слабо-розовый (Точка эквивалентности! ИДЕАЛЬНО!)",
+            magenta: "Ярко-малиновый (Перетитровано! Слишком щелочная среда, pH > 10)",
+            endpointReached: "Точка эквивалентности достигнута! Считайте объем NaOH строго по нижнему краю мениска.",
+            calculateTitle: "Расчет концентрации кислоты:",
+            calcFormula: "Используйте формулу закона эквивалентов: C(HCl) × V(HCl) = C(NaOH) × V(NaOH)",
+            knownValues: "Известно: V(HCl) = 10.00 мл, C(NaOH) = 0.100 М",
+            yourReading: "Введите объем NaOH по нижнему мениску (мл):",
+            calculatedConc: "Рассчитанная концентрация HCl (М):",
+            submitCalculation: "Проверить расчет",
+            calcSuccess: "Великолепно! Вы правильно провели титрование и точно рассчитали концентрацию HCl: ",
+            calcWrong: "Расчет или считанный объем неверны. Проверьте объем еще раз и пересчитайте по формуле.",
+
+            quizTitle: "Теоретический тест в формате VBE",
+            quizIntro: "Проверьте свои знания о химической посуде и требованиях к экспериментам на литовском госэкзамене.",
+            score: "Ваш результат:",
+            questionOf: "Вопрос",
+            correct: "Верно!",
+            incorrect: "Неверно. Правильный ответ:",
+            explanation: "Объяснение:",
+            nextQuestion: "Следующий вопрос",
+            restartQuiz: "Пройти тест заново",
+            quizFinished: "Тест завершен! Ваш результат: ",
+
+            gBurette: "Бюретка (Biuretė)",
+            gPipette: "Пипетка Мора (Vienžymė pipetė)",
+            gFlask: "Мерная колба (Matavimo kolba)",
+            gCylinder: "Мерный цилиндр (Matavimo cilindras)",
+            gBeaker: "Химический стакан (Cheminė stiklinė)",
+            gErlenmeyer: "Коническая колба (Kūginė kolba)"
+          }
+        };
+
+        const getQuizQuestions = (lang) => [
+          {
+            question: lang === 'LT' 
+              ? "Kuris indas naudojamas norint tiksliai pamatuoti ir pernešti 20,00 mL analizuojamo tirpalo į titravimo kolbą?"
+              : "Какая посуда используется для точного отмеривания и переноса 20.00 мл анализируемого раствора в колбу для титрования?",
+            options: lang === 'LT'
+              ? ["A) Matavimo cilindras (Matavimo cilindras)", "B) Chemical stiklinė (Cheminė stiklinė)", "C) Vienžymė pipetė / Moro pipetė (Vienžymė pipetė)", "D) Kūginė kolba (Kūginė kolba)"]
+              : ["А) Мерный цилиндр (Matavimo cilindras)", "Б) Химический стакан (Cheminė stiklinė)", "В) Пипетка Мора / однометка (Vienžymė pipetė)", "Г) Коническая колба (Kūгинė kolba)"],
+            answer: 2,
+            explanation: lang === 'LT'
+              ? "Vienžymė (Moro) pipetė yra tikslusis matavimo indas, skirtas vienam konkrečiam tūriui (pvz., 20.00 mL) itin tiksliai paimti. Matavimo cilindras ir stiklinė tam yra per mažai tikslūs."
+              : "Пипетка Мора (Vienžymė pipetė) — это высокоточный мерный прибор, предназначенный для отбора строго определенного объема (например, 20.00 мл) с минимальной погрешностью. Цилиндры и стаканы не дают нужной точности для титрования."
+          },
+          {
+            question: lang === 'LT'
+              ? "Mokinys biuretėje nuskaitė skysčio lygį, esantį tiesiai ant 15,4 mL žymos. Kaip šis rezultatas turi būti užrašytas VBE protokole?"
+              : "Ученик считал уровень жидкости в бюретке, находящийся ровно на отметке 15.4 мл. Как этот результат должен быть записан в протоколе экзамена VBE?",
+            options: lang === 'LT'
+              ? ["A) 15 mL", "B) 15.4 mL", "C) 15.40 mL", "D) 15.400 mL"]
+              : ["А) 15 мл", "Б) 15.4 мл", "В) 15.40 мл", "Г) 15.400 мл"],
+            answer: 2,
+            explanation: lang === 'LT'
+              ? "Biuretės rodmenys visada registruojami su 0.01 mL tikslumu. Jei meniskas yra tiesiai ant padalos, rašoma 15.40 mL. Tai parodo matavimo tikslumo klasę."
+              : "Показания бюретки всегда регистрируются с точностью до двух десятичных знаков (0.01 мл). Если мениск стоит ровно на делении, пишется 15.40 мл. Это отражает класс точности прибора."
+          },
+          {
+            question: lang === 'LT'
+              ? "Kas atsitiks, jei ruošiant tirpalą matavimo kolboje vandens bus įpilta šiek tiek virš kolbos kaklelio brūkšnio (žymos)?"
+              : "Что произойдет, если при приготовлении раствора в мерной колбе воды будет налито чуть выше метки на горлышке?",
+            options: lang === 'LT'
+              ? ["A) Galima nusiurbti perteklių pipete ir tęsti darbą", "B) Reikia viską išpilti ir ruošti tirpalą iš naujo", "C) Tai neturi įtakos tirpalo koncentracijai", "D) Reikia stipriau suplakti, kad tūris sumažėtų"]
+              : ["А) Можно отлить избыток пипеткой и продолжить работу", "Б) Нужно всё вылить и готовить раствор заново", "В) Это не влияет на конечную концентрацию раствора", "Г) Нужно сильнее встряхнуть колбу, чтобы объем уменьшился"],
+            answer: 1,
+            explanation: lang === 'LT'
+              ? "Jei vandens įpilama virš žymos, tirpalas yra per daug praskiestas. Kadangi tirpinys jau pasiskirstė kolboje, tiesiog nusiurbti vandens viršaus negalima, nes pašalintume ir dalį tirpinio. Tirpalą būtina ruošti iš naujo."
+              : "Если вода налита выше метки, раствор уже разбавлен сильнее требуемого. Так как растворенное вещество уже распределилось по колбе, просто отобрать лишнюю воду пипеткой нельзя — вы уберете и часть вещества. Раствор испорчен, его нужно готовить заново."
+          },
+          {
+            question: lang === 'LT'
+              ? "Koks reiškinys sukelia klaidingą tūrio nuskaitymą, jei stebėtojo akys yra aukščiau arba žemiau skysčio menisko lygio?"
+              : "Какое явление приводит к ложной оценке объема, если глаза наблюдателя находятся выше или ниже уровня мениска жидкости?",
+            options: lang === 'LT'
+              ? ["A) Difrakcija", "B) Refrakcija (Šviesos lūžis)", "C) Paralaksas (Paralakso paklaida)", "D) Dispersija"]
+              : ["А) Дифракция", "Б) Рефракция (преломление)", "В) Параллакс (ошибка параллакса)", "Г) Дисперсия"],
+            answer: 2,
+            explanation: lang === 'LT'
+              ? "Paralaksas yra matuojamo objekto padėties pasikeitimas žiūrint iš skirtingų taškų. Chemijoje jis sukelia tūrio nuskaitymo klaidas, jei žiūrima ne akių lygyje."
+              : "Параллакс — это изменение видимого положения объекта относительно фона в зависимости от положения глаза наблюдателя. В химии это классическая причина ошибок считывания мениска."
+          },
+          {
+            question: lang === 'LT'
+              ? "Kaip reikia tinkamai paruošti biuretę titravimui po to, kai ji buvo išplauta distiliuotu vandeniu?"
+              : "Как следует правильно подготовить бюретку к титрованию после того, как она была вымыта дистиллированной водой?",
+            options: lang === 'LT'
+              ? ["A) Iškart pilti titruojantį tirpalą", "B) Praskalauti nedideliu kiekiu to tirpalo, kuriuo ji bus pildoma, ir jį išpilti", "C) Išdžiovinti biuretę krosnelėje aukštoje temperatūroje", "D) Pravalyti vidų popierine servetėle ant ilgos vielos"]
+              : ["А) Сразу заливать рабочий раствор для титрования", "Б) Ополоснуть небольшим количеством того раствора, которым она будет заполнена, и слить его", "В) Высушить бюретку в сушильном шкафу при высокой температуре", "Г) Протереть изнутри бумажной салфеткой на длинной проволоке"],
+            answer: 1,
+            explanation: lang === 'LT'
+              ? "Jei biuretėje liko distiliuoto vandens lašų, jie praskies įpilamą tirpalą. Būtina ją perplauti nauju reagentu."
+              : "Если на стенках бюретки осталась дистиллированная вода, она разбавит приливаемый рабочий раствор (титрант) и изменит его точную концентрацию. Поэтому бюретку ополаскивают рабочим раствором перед заполнением."
+          },
+          {
+            question: lang === 'LT'
+              ? "Kuris iš šių indų priskiriamas APYTIKSLIAMS (netiksliesiems) indams?"
+              : "Какая из следующих позиций посуды относится к ПРИБЛИЗИТЕЛЬНОЙ (неточной) посуде?",
+            options: lang === 'LT'
+              ? ["A) Matavimo kolba (Matavimo kolba)", "B) Biuretė (Biuretė)", "C) Kūginė kolba (Kūginė kolba)", "D) Vienžymė pipetė (Vienžymė pipetė)"]
+              : ["А) Мерная колба (Matavimo kolba)", "Б) Бюретка (Biuretė)", "В) Коническая колба (Kūginė kolba)", "Г) Пипетка Мора (Vienžymė pipetė)"],
+            answer: 2,
+            explanation: lang === 'LT'
+              ? "Kūginė kolba (kaip ir cheminė stiklinė) turi tik apytiksles tūrio žymas, skirtas orientacijai. Jos niekada nenaudojamos tiksliam tirpalų tūriui matuoti."
+              : "Коническая колба (как и химический стакан) имеет лишь ориентировочные метки объема. Они никогда не используются для точного количественного анализа и отмеривания."
+          }
+        ];
+
+        function App() {
+          const [lang, setLang] = useState('LT');
+          const [activeTab, setActiveTab] = useState('theory');
+          const t = translations[lang];
+
+          // --- SCALE TRAINER STATE ---
+          const [scaleType, setScaleType] = useState('burette'); 
+          const [trainerTargetVolume, setTrainerTargetVolume] = useState(12.35);
+          const [userScaleValue, setUserScaleValue] = useState('');
+          const [trainerFeedback, setTrainerFeedback] = useState(null); 
+          const [showTrainerHelp, setShowTrainerHelp] = useState(true); 
+
+          const generateNewTrainerTarget = (type) => {
+            setUserScaleValue('');
+            setTrainerFeedback(null);
+            if (type === 'burette') {
+              const randomVal = 12.00 + Math.floor(Math.random() * 21) * 0.05;
+              setTrainerTargetVolume(parseFloat(randomVal.toFixed(2)));
+            } else {
+              const randomVal = 40.0 + Math.floor(Math.random() * 21) * 0.5;
+              setTrainerTargetVolume(parseFloat(randomVal.toFixed(1)));
+            }
+          };
+
+          useEffect(() => {
+            generateNewTrainerTarget(scaleType);
+          }, [scaleType]);
+
+          const handleCheckScaleAnswer = () => {
+            const userVal = parseFloat(userScaleValue.replace(',', '.'));
+            if (isNaN(userVal)) {
+              setTrainerFeedback({
+                status: 'error',
+                msg: lang === 'LT' ? "Įveskite skaičių!" : "Пожалуйста, введите корректное число!"
+              });
+              return;
+            }
+
+            const tolerance = scaleType === 'burette' ? 0.05 : 0.2;
+            const diff = Math.abs(userVal - trainerTargetVolume);
+
+            if (diff === 0) {
+              setTrainerFeedback({
+                status: 'success',
+                msg: t.correctMsg + trainerTargetVolume + " mL!"
+              });
+            } else if (diff <= tolerance) {
+              setTrainerFeedback({
+                status: 'warning',
+                msg: t.almostCorrectMsg + trainerTargetVolume + ` mL. (Jūsų įvestas: ${userVal} mL)`
+              });
+            } else {
+              setTrainerFeedback({
+                status: 'fail',
+                msg: t.wrongMsg + trainerTargetVolume + " mL."
+              });
+            }
+          };
+
+          // --- TITRATION STATE ---
+          const [titrationStep, setTitrationStep] = useState(1); 
+          const [titrantVolume, setTitrantVolume] = useState(0.00); 
+          const [indicatorAdded, setIndicatorAdded] = useState(false);
+          const [acidConcentration, setAcidConcentration] = useState(0.125); 
+          const [exactEndpointVolume, setExactEndpointVolume] = useState(12.50); 
+          const [userCalcConcentration, setUserCalcConcentration] = useState('');
+          const [userCalcVolume, setUserCalcVolume] = useState('');
+          const [calcFeedback, setCalcFeedback] = useState(null);
+
+          const resetTitrationLab = () => {
+            setTitrationStep(1);
+            setTitrantVolume(0.00);
+            setIndicatorAdded(false);
+            setCalcFeedback(null);
+            setUserCalcConcentration('');
+            setUserCalcVolume('');
+            
+            const randomEndpoint = 11.00 + Math.random() * 3.5;
+            const formattedEndpoint = parseFloat(randomEndpoint.toFixed(2));
+            setExactEndpointVolume(formattedEndpoint);
+            
+            const calculatedAcidConc = (0.100 * formattedEndpoint) / 10.00;
+            setAcidConcentration(parseFloat(calculatedAcidConc.toFixed(4)));
+          };
+
+          useEffect(() => {
+            resetTitrationLab();
+          }, []);
+
+          const handleTitrateFast = () => {
+            if (titrationStep < 4) return;
+            setTitrantVolume(prev => {
+              const next = prev + 0.50;
+              return parseFloat(next.toFixed(2));
+            });
+          };
+
+          const handleTitrateDrop = () => {
+            if (titrationStep < 4) return;
+            setTitrantVolume(prev => {
+              const next = prev + 0.05;
+              return parseFloat(next.toFixed(2));
+            });
+          };
+
+          const getSolutionColor = () => {
+            if (!indicatorAdded) return { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', liquidColor: 'rgba(230, 242, 255, 0.4)', label: lang === 'LT' ? 'Be indikatoriaus' : 'Без индикатора' };
+            const diff = titrantVolume - exactEndpointVolume;
+            if (diff < -0.15) {
+              return {
+                bg: 'bg-slate-50', 
+                text: 'text-slate-500', 
+                border: 'border-slate-300',
+                liquidColor: 'rgba(230, 242, 255, 0.4)',
+                label: t.colorless
+              };
+            } else if (diff >= -0.15 && diff <= 0.05) {
+              return {
+                bg: 'bg-pink-100 animate-pulse', 
+                text: 'text-pink-600 font-bold', 
+                border: 'border-pink-400',
+                liquidColor: 'rgba(255, 182, 193, 0.7)',
+                label: t.lightPink
+              };
+            } else {
+              return {
+                bg: 'bg-fuchsia-200', 
+                text: 'text-fuchsia-800 font-extrabold', 
+                border: 'border-fuchsia-500',
+                liquidColor: 'rgba(219, 39, 119, 0.95)',
+                label: t.magenta
+              };
+            }
+          };
+
+          const handleCheckCalculation = () => {
+            const userVol = parseFloat(userCalcVolume.replace(',', '.'));
+            const userConc = parseFloat(userCalcConcentration.replace(',', '.'));
+
+            if (isNaN(userVol) || isNaN(userConc)) {
+              setCalcFeedback({
+                status: 'error',
+                msg: lang === 'LT' ? "Užpildykite visus laukus!" : "Заполните все поля ввода числовыми значениями!"
+              });
+              return;
+            }
+
+            const volDiff = Math.abs(userVol - exactEndpointVolume);
+            const expectedConc = (0.100 * userVol) / 10.00;
+            const concDiff = Math.abs(userConc - expectedConc);
+
+            if (volDiff <= 0.10 && concDiff <= 0.0015) {
+              setCalcFeedback({
+                status: 'success',
+                msg: t.calcSuccess + ` ${expectedConc.toFixed(4)} M.`
+              });
+            } else {
+              setCalcFeedback({
+                status: 'fail',
+                msg: t.calcWrong + ` (Jūsų paklaida: tūrio ~${volDiff.toFixed(2)} mL, koncentracijos ~${concDiff.toFixed(4)} M)`
+              });
+            }
+          };
+
+          // --- QUIZ STATE ---
+          const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
+          const [selectedOption, setSelectedOption] = useState(null);
+          const [isAnswerSubmitted, setIsAnswerSubmitted] = useState(false);
+          const [quizScore, setQuizScore] = useState(0);
+          const [quizFinished, setQuizFinished] = useState(false);
+
+          const quizQuestions = getQuizQuestions(lang);
+
+          const handleOptionSelect = (idx) => {
+            if (isAnswerSubmitted) return;
+            setSelectedOption(idx);
+          };
+
+          const handleSubmitQuizAnswer = () => {
+            if (selectedOption === null || isAnswerSubmitted) return;
+            
+            if (selectedOption === quizQuestions[currentQuestionIdx].answer) {
+              setQuizScore(prev => prev + 1);
+            }
+            setIsAnswerSubmitted(true);
+          };
+
+          const handleNextQuestion = () => {
+            setSelectedOption(null);
+            setIsAnswerSubmitted(false);
+            if (currentQuestionIdx < quizQuestions.length - 1) {
+              setCurrentQuestionIdx(prev => prev + 1);
+            } else {
+              setQuizFinished(true);
+            }
+          };
+
+          const handleRestartQuiz = () => {
+            setCurrentQuestionIdx(0);
+            setSelectedOption(null);
+            setIsAnswerSubmitted(false);
+            setQuizScore(0);
+            setQuizFinished(false);
+          };
+
+          return (
+            <div className="min-h-screen bg-slate-50 text-slate-800 font-sans pb-6">
+              {/* --- COMPACT HEADER --- */}
+              <header className="bg-gradient-to-r from-blue-900 to-indigo-950 text-white shadow-md">
+                <div className="max-w-6xl mx-auto px-4 py-3 flex flex-col sm:flex-row justify-between items-center gap-2">
+                  <div>
+                    <h1 className="text-xl md:text-2xl font-extrabold tracking-tight flex items-center gap-2">
+                      <CompassIcon />
+                      {t.title}
+                    </h1>
+                    <p className="text-blue-200 text-xs mt-0.5">{t.subtitle}</p>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <button 
+                      onClick={() => setLang(prev => prev === 'LT' ? 'RU' : 'LT')}
+                      className="flex items-center gap-2 bg-indigo-800 hover:bg-indigo-700 text-white font-semibold py-1.5 px-3 rounded-lg border border-indigo-600 transition-all text-xs"
+                    >
+                      <GlobeIcon className="h-4 w-4 text-teal-400" />
+                      <span>{lang === 'LT' ? 'Lietuvių' : 'Русский'}</span>
+                      <span className="bg-teal-500 text-indigo-950 px-1 rounded font-black ml-1">
+                        {lang === 'LT' ? 'LT' : 'RU'}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Tab Selection Row */}
+                <div className="max-w-6xl mx-auto px-4">
+                  <nav className="flex flex-wrap gap-1 border-t border-indigo-900/60 pt-2">
+                    {[
+                      { id: 'theory', icon: BookOpenIcon, label: t.tabTheory },
+                      { id: 'scale', icon: LayersIcon, label: t.tabScale },
+                      { id: 'titration', icon: DropletIcon, label: t.tabTitration },
+                      { id: 'quiz', icon: HelpCircleIcon, label: t.tabQuiz },
+                    ].map(tab => {
+                      const Icon = tab.icon;
+                      const isActive = activeTab === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          onClick={() => setActiveTab(tab.id)}
+                          className={`flex items-center gap-1.5 px-4 py-2 rounded-t-lg font-medium text-xs transition-all ${
+                            isActive 
+                              ? 'bg-slate-50 text-indigo-950 shadow-inner border-t-2 border-teal-500 font-bold' 
+                              : 'text-indigo-200 hover:text-white hover:bg-indigo-900/30'
+                          }`}
+                        >
+                          <Icon className={`h-4 w-4 ${isActive ? 'text-teal-600' : 'text-indigo-300'}`} />
+                          {tab.label}
+                        </button>
+                      );
+                    })}
+                  </nav>
+                </div>
+              </header>
+
+              {/* --- MAIN WORKSPACE --- */}
+              <main className="max-w-6xl mx-auto px-4 mt-4">
+
+                {/* --- TAB 1: THEORY --- */}
+                {activeTab === 'theory' && (
+                  <div className="space-y-4 animate-fade-in">
+                    {/* Intro Card */}
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                      <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2 mb-1">
+                        <BookOpenIcon className="h-5 w-5 text-indigo-600" />
+                        {t.theoryTitle}
+                      </h2>
+                      <p className="text-xs text-slate-600">{t.theoryIntro}</p>
+                    </div>
+
+                    {/* Parallax SVG Illustration matching image_9f920b.png */}
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                      <h3 className="text-md font-bold text-slate-900 mb-3 flex items-center gap-2">
+                        <InfoIcon className="h-5 w-5 text-indigo-600" />
+                        {t.meniscusRuleTitle}
+                      </h3>
+                      
+                      <div className="grid lg:grid-cols-12 gap-4 items-center">
+                        
+                        {/* SVG Graphic modeled exactly on image_9f920b.png */}
+                        <div className="lg:col-span-8 bg-slate-50 p-2 rounded-xl border border-slate-200 flex flex-col items-center">
+                          <h4 className="text-xs font-bold text-slate-700 mb-2 text-center">{t.parallaxError}</h4>
+                          
+                          <svg viewBox="0 0 520 640" className="w-full max-w-[450px] bg-white rounded-lg shadow-inner border border-slate-100">
+                            
+                            {/* Glass Burette Tube */}
+                            <rect x="180" y="10" width="100" height="620" fill="none" stroke="#334155" strokeWidth="2.5" />
+                            
+                            {/* Wavy open ends */}
+                            <path d="M 180,10 Q 205,0 230,10 Q 255,20 280,10" fill="none" stroke="#334155" strokeWidth="2.5" />
+                            <path d="M 180,630 Q 205,620 230,630 Q 255,640 280,630" fill="none" stroke="#334155" strokeWidth="2.5" />
+
+                            {/* Scale Graduations from 17.8 to 21.2 */}
+                            {Array.from({ length: 35 }).map((_, idx) => {
+                              const val = 17.8 + idx * 0.1;
+                              const yPos = 80 + (val - 18.0) * 160;
+                              const isMajor = Math.abs(val - Math.round(val)) < 0.01;
+                              const isHalf = Math.abs((val % 1) - 0.5) < 0.01;
+
+                              if (yPos < 30 || yPos > 610) return null;
+
+                              return (
+                                <g key={idx}>
+                                  <line 
+                                    x1={isMajor ? "220" : (isHalf ? "235" : "245")} 
+                                    y1={yPos} 
+                                    x2="280" 
+                                    y2={yPos} 
+                                    stroke="#1e293b" 
+                                    strokeWidth={isMajor ? "2" : (isHalf ? "1.5" : "1")} 
+                                  />
+                                  {isMajor && (
+                                    <text x="195" y={yPos + 6} fill="#1e293b" className="text-lg font-black font-sans">
+                                      {Math.round(val)}
+                                    </text>
+                                  )}
+                                </g>
+                              );
+                            })}
+
+                            {/* Light blue liquid filled up to 19.70 ml (y = 352) */}
+                            <path d="M 180,630 L 180,332 Q 230,352 280,332 L 280,630 Z" fill="rgba(14, 165, 233, 0.18)" />
+                            {/* Darker curved meniscus line with bottom at exactly 19.70 ml */}
+                            <path d="M 180,332 Q 230,352 280,332" fill="none" stroke="#0284c7" strokeWidth="4.5" />
+
+                            {/* Lines of Sight (intersecting exactly at bottom vertex (230, 352)) */}
+                            
+                            {/* 1. Green level sight line (True volume: 19.70 ml) */}
+                            <line x1="120" y1="352" x2="450" y2="352" stroke="#10b981" strokeWidth="2" />
+                            {/* Arrow head pointing to 19.70 ml */}
+                            <path d="M 120,352 L 130,347 L 130,357 Z" fill="#10b981" />
+
+                            {/* 2. Top sight line (High view projecting down to 19.82 ml) */}
+                            <line x1="120" y1="371.2" x2="450" y2="316.8" stroke="#ef4444" strokeWidth="1.5" />
+                            <path d="M 120,371.2 L 131,365 L 127,374 Z" fill="#ef4444" />
+
+                            {/* 3. Bottom sight line (Low view projecting up to 19.62 ml) */}
+                            <line x1="120" y1="332.8" x2="450" y2="387.2" stroke="#ef4444" strokeWidth="1.5" />
+                            <path d="M 120,332.8 L 127,330 L 131,339 Z" fill="#ef4444" />
+
+                            {/* Stylized Eyes looking left */}
+                            {/* Top Eye (High position) */}
+                            <g transform="translate(450, 316.8) scale(0.6)">
+                              <path d="M 15,-10 Q -15,0 15,10" stroke="#000" strokeWidth="2.5" fill="none" />
+                              <path d="M 15,-10 C 5,-2 5,2 15,10" stroke="#000" strokeWidth="2.5" fill="none" />
+                              <path d="M 10,-6 C 4,-2 4,2 10,6 Z" fill="#60a5fa" />
+                              <circle cx="8" cy="0" r="2.5" fill="#000" />
+                            </g>
+
+                            {/* Level Eye */}
+                            <g transform="translate(450, 352) scale(0.6)">
+                              <path d="M 15,-10 Q -15,0 15,10" stroke="#000" strokeWidth="2.5" fill="none" />
+                              <path d="M 15,-10 C 5,-2 5,2 15,10" stroke="#000" strokeWidth="2.5" fill="none" />
+                              <path d="M 10,-6 C 4,-2 4,2 10,6 Z" fill="#60a5fa" />
+                              <circle cx="8" cy="0" r="2.5" fill="#000" />
+                            </g>
+
+                            {/* Bottom Eye */}
+                            <g transform="translate(450, 387.2) scale(0.6)">
+                              <path d="M 15,-10 Q -15,0 15,10" stroke="#000" strokeWidth="2.5" fill="none" />
+                              <path d="M 15,-10 C 5,-2 5,2 15,10" stroke="#000" strokeWidth="2.5" fill="none" />
+                              <path d="M 10,-6 C 4,-2 4,2 10,6 Z" fill="#60a5fa" />
+                              <circle cx="8" cy="0" r="2.5" fill="#000" />
+                            </g>
+
+                            {/* Projection Labels on the left */}
+                            <text x="110" y="377" fill="#dc2626" className="text-xl font-bold font-sans text-right" textAnchor="end">19.82 ml</text>
+                            <text x="110" y="358" fill="#059669" className="text-xl font-black font-sans text-right" textAnchor="end">19.70 ml</text>
+                            <text x="110" y="338" fill="#dc2626" className="text-xl font-bold font-sans text-right" textAnchor="end">19.62 ml</text>
+                          </svg>
+                        </div>
+
+                        {/* Right text explanation column */}
+                        <div className="lg:col-span-4 space-y-2 text-xs text-slate-600">
+                          <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                            <p className="font-bold text-emerald-900 mb-1">
+                              {lang === 'LT' ? '✓ Teisingas matavimo būdas' : '✓ Правильный метод измерения'}
+                            </p>
+                            <p>{t.parallaxEye}</p>
+                          </div>
+                          
+                          <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg space-y-1">
+                            <p className="font-bold text-rose-900">
+                              {lang === 'LT' ? '❌ Paralakso pasekmės (Biuretė)' : '❌ Последствия параллакса (Бюретка)'}
+                            </p>
+                            <p>{t.parallaxHigh}</p>
+                            <p>{t.parallaxLow}</p>
+                          </div>
+                        </div>
+
+                      </div>
+                    </div>
+
+                    {/* Classification Grid */}
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {/* Exact Glassware */}
+                      <div className="bg-emerald-50/40 p-4 rounded-xl border border-emerald-100">
+                        <h3 className="text-sm font-bold text-emerald-900 mb-2 flex items-center gap-1.5">
+                          <span className="p-1 bg-emerald-100 rounded text-emerald-700 text-xs">✓</span>
+                          {t.glasswareExact}
+                        </h3>
+                        
+                        <div className="grid gap-2 text-xs">
+                          <div className="bg-white p-3 rounded-lg shadow-sm border border-emerald-100/60">
+                            <h4 className="font-bold text-slate-800">{t.gBurette}</h4>
+                            <p className="text-slate-600 mt-0.5">
+                              {lang === 'LT' 
+                                ? "Tikslus tirpalo lašinimas. Skalė prasideda viršuje (0 mL). Rezultatai visada rašomi su dviem skaitmenimis po kablelio (pvz., 12.40 mL)."
+                                : "Точное приливание раствора. Шкала сверху вниз (0 вверху). Запись результатов всегда строго с двумя знаками (например, 12.40 мл)."}
+                            </p>
+                          </div>
+
+                          <div className="bg-white p-3 rounded-lg shadow-sm border border-emerald-100/60">
+                            <h4 className="font-bold text-slate-800">{t.gPipette}</h4>
+                            <p className="text-slate-600 mt-0.5">
+                              {lang === 'LT' 
+                                ? "Vienam fiksuotam tūriui (pvz., 10.00 mL) itin tiksliai pernešti. Turi vieną apskritą brūkšnį ant kaklelio."
+                                : "Сверхточный забор одного фиксированного объема (например, 10.00 мл). С одной круговой меткой на горлышке."}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Approximate Glassware */}
+                      <div className="bg-amber-50/40 p-4 rounded-xl border border-amber-100">
+                        <h3 className="text-sm font-bold text-amber-900 mb-2 flex items-center gap-1.5">
+                          <span className="p-1 bg-amber-100 rounded text-amber-700 text-xs">⚠</span>
+                          {t.glasswareApprox}
+                        </h3>
+                        
+                        <div className="grid gap-2 text-xs">
+                          <div className="bg-white p-3 rounded-lg shadow-sm border border-amber-100/60">
+                            <h4 className="font-bold text-slate-800">{t.gCylinder}</h4>
+                            <p className="text-slate-600 mt-0.5">
+                              {lang === 'LT' 
+                                ? "Apytikslis tūrio matavimas. Skalė didėja į viršų. Netinka preciziniam analitiniam titravimui!"
+                                : "Ориентировочное отмеривание объемов. Шкала снизу вверх. Не используется для высокоточного титрования!"}
+                            </p>
+                          </div>
+
+                          <div className="bg-white p-3 rounded-lg shadow-sm border border-amber-100/60">
+                            <h4 className="font-bold text-slate-800">{t.gBeaker} / {t.gErlenmeyer}</h4>
+                            <p className="text-slate-600 mt-0.5">
+                              {lang === 'LT' 
+                                ? "Skirti reakcijoms, kaitinimui, laikinam laikymui. Brūkšneliai yra tik apytikriai (paklaida iki 10-20%!)."
+                                : "Для проведения реакций, растворения и смешивания. Метки объема приблизительные (погрешность до 10-20%!)."}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* VBE Tip Alert */}
+                    <div className="bg-amber-50 p-4 rounded-xl border border-amber-200 flex items-start gap-3">
+                      <div className="p-1.5 bg-amber-100 rounded-lg text-amber-800 shrink-0">
+                        <AwardIcon className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-amber-900 mb-0.5">{t.vbeTipTitle}</h4>
+                        <p className="text-amber-800 text-xs leading-relaxed">{t.vbeTipText}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+
+                {/* --- TAB 2: SCALE TRAINER --- */}
+                {activeTab === 'scale' && (
+                  <div className="space-y-4 animate-fade-in">
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                      <h2 className="text-lg font-bold text-slate-900 mb-1">{t.scaleTrainerTitle}</h2>
+                      <p className="text-xs text-slate-600">{t.scaleTrainerSubtitle}</p>
+
+                      {/* Glassware Selectors */}
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        <button
+                          onClick={() => setScaleType('bureette')}
+                          className={`flex-1 min-w-[200px] p-2.5 rounded-lg border text-left transition-all ${
+                            scaleType === 'burette' 
+                              ? 'border-indigo-600 bg-indigo-50/50 shadow-sm font-semibold' 
+                              : 'border-slate-200 hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="text-[10px] text-indigo-600 uppercase font-black mb-0.5">{t.glasswareBurette}</div>
+                          <div className="text-slate-800 text-xs font-semibold">{t.buretteName}</div>
+                        </button>
+
+                        <button
+                          onClick={() => setScaleType('cylinder')}
+                          className={`flex-1 min-w-[200px] p-2.5 rounded-lg border text-left transition-all ${
+                            scaleType === 'cylinder' 
+                              ? 'border-indigo-600 bg-indigo-50/50 shadow-sm font-semibold' 
+                              : 'border-slate-200 hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="text-[10px] text-indigo-600 uppercase font-black mb-0.5">{t.glasswareCylinder}</div>
+                          <div className="text-slate-800 text-xs font-semibold">{t.cylinderName}</div>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Dynamic Glassware Drawing Section */}
+                    <div className="grid md:grid-cols-2 gap-4">
+                      
+                      {/* Left Column: Glassware SVG Zoom-in */}
+                      <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col items-center">
+                        <div className="text-xs text-indigo-600 font-black mb-2 uppercase tracking-wider text-center">
+                          {scaleType === 'burette' ? t.gBurette : t.gCylinder} (Zoom)
+                          <span className="block text-[10px] text-rose-600 font-bold mt-0.5">
+                            {lang === 'LT' ? 'Skaitykite pagal apatinį menisko kraštą!' : 'Считывайте строго по нижнему краю мениска!'}
+                          </span>
+                        </div>
+
+                        <div className="w-full max-w-[220px] bg-slate-50 p-2 rounded-xl border border-slate-100 flex justify-center shadow-inner relative">
+                          <svg viewBox="0 0 160 360" className="w-full h-[320px]">
+                            {scaleType === 'burette' ? (
+                              // BURETTE DRAWING
+                              <g>
+                                <rect x="40" y="10" width="80" height="340" fill="none" stroke="#94a3b8" strokeWidth="3" />
+                                
+                                {Array.from({ length: 11 }).map((_, i) => {
+                                  const tickValue = 12 + i * 0.1;
+                                  const yPos = 30 + i * 28; 
+                                  const isMajor = i % 5 === 0;
+                                  return (
+                                    <g key={i}>
+                                      <line 
+                                        x1="40" 
+                                        y1={yPos} 
+                                        x2={isMajor ? "75" : "55"} 
+                                        y2={yPos} 
+                                        stroke="#1e293b" 
+                                        strokeWidth={isMajor ? "3" : "1.5"} 
+                                      />
+                                      {isMajor && (
+                                        <text x="85" y={yPos + 4} fill="#1e293b" className="text-xs font-black">
+                                          {tickValue.toFixed(1)}
+                                        </text>
+                                      )}
+                                    </g>
+                                  );
+                                })}
+
+                                {(() => {
+                                  const factor = (trainerTargetVolume - 12.0) / 1.0;
+                                  const targetY = 30 + factor * 280;
+
+                                  return (
+                                    <g>
+                                      <path 
+                                        d={`M 40,350 L 40,${targetY - 15} Q 80,${targetY + 15} 120,${targetY - 15} L 120,350 Z`} 
+                                        fill="rgba(14, 165, 233, 0.18)" 
+                                      />
+                                      <path 
+                                        d={`M 40,${targetY - 15} Q 80,${targetY + 15} 120,${targetY - 15}`} 
+                                        fill="none" 
+                                        stroke="#0284c7" 
+                                        strokeWidth="4.5" 
+                                      />
+                                      
+                                      {showTrainerHelp && (
+                                        <g>
+                                          <line 
+                                            x1="15" 
+                                            y1={targetY} 
+                                            x2="145" 
+                                            y2={targetY} 
+                                            stroke="#dc2626" 
+                                            strokeWidth="1.5" 
+                                            strokeDasharray="2" 
+                                          />
+                                          <circle cx="80" cy={targetY} r="3" fill="#dc2626" />
+                                        </g>
+                                      )}
+                                    </g>
+                                  );
+                                })()}
+                              </g>
+                            ) : (
+                              // CYLINDER DRAWING
+                              <g>
+                                <rect x="40" y="10" width="80" height="340" fill="none" stroke="#94a3b8" strokeWidth="3" />
+                                
+                                {Array.from({ length: 11 }).map((_, i) => {
+                                  const tickValue = 40 + i;
+                                  const yPos = 310 - i * 28;
+                                  const isMajor = i % 5 === 0;
+                                  return (
+                                    <g key={i}>
+                                      <line 
+                                        x1="40" 
+                                        y1={yPos} 
+                                        x2={isMajor ? "75" : "55"} 
+                                        y2={yPos} 
+                                        stroke="#1e293b" 
+                                        strokeWidth={isMajor ? "3" : "1.5"} 
+                                      />
+                                      {isMajor && (
+                                        <text x="85" y={yPos + 4} fill="#1e293b" className="text-xs font-black">
+                                          {tickValue}
+                                        </text>
+                                      )}
+                                    </g>
+                                  );
+                                })}
+
+                                {(() => {
+                                  const factor = (trainerTargetVolume - 40.0) / 10.0;
+                                  const targetY = 310 - factor * 280;
+
+                                  return (
+                                    <g>
+                                      <path 
+                                        d={`M 40,350 L 40,${targetY - 15} Q 80,${targetY + 15} 120,${targetY - 15} L 120,350 Z`} 
+                                        fill="rgba(14, 165, 233, 0.18)" 
+                                      />
+                                      <path 
+                                        d={`M 40,${targetY - 15} Q 80,${targetY + 15} 120,${targetY - 15}`} 
+                                        fill="none" 
+                                        stroke="#0284c7" 
+                                        strokeWidth="4.5" 
+                                      />
+                                      
+                                      {showTrainerHelp && (
+                                        <g>
+                                          <line 
+                                            x1="15" 
+                                            y1={targetY} 
+                                            x2="145" 
+                                            y2={targetY} 
+                                            stroke="#dc2626" 
+                                            strokeWidth="1.5" 
+                                            strokeDasharray="2" 
+                                          />
+                                          <circle cx="80" cy={targetY} r="3" fill="#dc2626" />
+                                        </g>
+                                      )}
+                                    </g>
+                                  );
+                                })()}
+                              </g>
+                            )}
+                          </svg>
+
+                          {showTrainerHelp && (
+                            <div className="absolute top-2 left-2 bg-red-100 text-red-800 text-[10px] px-1.5 py-0.5 rounded font-bold border border-red-200">
+                              {lang === 'LT' ? 'Apatinis kraštas' : 'Нижний край мениска'}
+                            </div>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() => setShowTrainerHelp(prev => !prev)}
+                          className="mt-2 text-[11px] text-indigo-600 hover:text-indigo-800 flex items-center gap-1 underline font-medium"
+                        >
+                          <InfoIcon className="h-5 w-5" />
+                          {showTrainerHelp 
+                            ? (lang === 'LT' ? 'Slėpti apatinio menisko liniją' : 'Скрыть линию нижнего мениска') 
+                            : (lang === 'LT' ? 'Rodyti apatinio menisko liniją' : 'Показать линию нижнего мениска')}
+                        </button>
+                      </div>
+
+                      {/* Right Column: Interaction & Explanation */}
+                      <div className="space-y-4">
+                        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                          <h3 className="text-sm font-bold text-slate-900 mb-2">{t.targetVolume}</h3>
+                          
+                          <div className="space-y-3">
+                            <div>
+                              <input
+                                type="text"
+                                value={userScaleValue}
+                                onChange={(e) => setUserScaleValue(e.target.value)}
+                                placeholder={scaleType === 'burette' ? "Pvz. 12.35" : "Pvz. 42.5"}
+                                className="w-full text-md p-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+                              />
+                            </div>
+
+                            <div className="flex gap-2">
+                              <button
+                                onClick={handleCheckScaleAnswer}
+                                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3 rounded-lg shadow transition-all text-xs"
+                              >
+                                {t.checkAnswer}
+                              </button>
+
+                              <button
+                                onClick={() => generateNewTrainerTarget(scaleType)}
+                                className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-all"
+                                title={t.nextLevel}
+                              >
+                                <RefreshCwIcon className="h-5 w-5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {trainerFeedback && (
+                            <div className={`mt-3 p-3 rounded-lg border flex items-start gap-2 text-xs ${
+                              trainerFeedback.status === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' :
+                              trainerFeedback.status === 'warning' ? 'bg-amber-50 border-amber-200 text-amber-800' :
+                              'bg-rose-50 border-rose-200 text-rose-800'
+                            }`}>
+                              {trainerFeedback.status === 'success' ? (
+                                <CheckCircleIcon className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+                              ) : (
+                                <AlertCircleIcon className={`h-5 w-5 shrink-0 mt-0.5 ${trainerFeedback.status === 'warning' ? 'text-amber-600' : 'text-rose-600'}`} />
+                              )}
+                              <div>
+                                <p className="font-semibold">{trainerFeedback.msg}</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Educational Rule Explanation Box */}
+                        <div className="bg-slate-100/80 p-4 rounded-xl border border-slate-200">
+                          <h3 className="text-xs font-bold text-slate-800 mb-2 flex items-center gap-1.5">
+                            <AwardIcon className="h-5 w-5 text-teal-600" />
+                            {t.explanationTitle}
+                          </h3>
+                          
+                          <div className="space-y-2 text-xs text-slate-600 leading-relaxed">
+                            <p>
+                              <strong>{t.scaleDirection}</strong>{' '}
+                              {scaleType === 'burette' ? (
+                                <span className="text-indigo-950 font-semibold">{t.scaleDown}</span>
+                              ) : (
+                                <span className="text-indigo-950 font-semibold">{t.scaleUp}</span>
+                              )}
+                            </p>
+                            <p>
+                              <strong>{t.estimatedDigit}</strong>{' '}
+                              {scaleType === 'burette' ? t.estimatedDigitBurette : t.estimatedDigitCylinder}
+                            </p>
+                            <p className="p-2 bg-white border border-slate-200/50 rounded text-[10px] font-semibold text-indigo-950">
+                              {scaleType === 'burette' 
+                                ? (lang === 'LT' ? "SVARBU: Užrašykite du skaitmenis po kablelio. Nuskaitant iš apačios į viršų ar viršaus į apačią - žiūrime TIK į menisko apačią!" : "ВАЖНО: Записывайте ровно два десятичных знака для бюретки. Отсчет всегда идет по самой нижней, центральной части дуги мениска!")
+                                : (lang === 'LT' ? "SVARBU: Užrašykite vieną skaitmenį po kablelio dešimtosioms dalims patikslinti (pvz., 42.5)." : "ВАЖНО: Для цилиндра записывайте один десятичный знак (например, 42.5).")}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+                )}
+
+
+                {/* --- TAB 3: TITRATION LAB --- */}
+                {activeTab === 'titration' && (
+                  <div className="space-y-4 animate-fade-in">
+                    {/* Titration Introduction */}
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                      <h2 className="text-lg font-bold text-slate-900 mb-0.5">{t.titrationTitle}</h2>
+                      <p className="text-xs text-slate-600">{t.titrationIntro}</p>
+                    </div>
+
+                    <div className="grid lg:grid-cols-12 gap-4">
+                      
+                      {/* Left Column: Interactive Lab Procedure Controls */}
+                      <div className="lg:col-span-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                        <div className="space-y-3">
+                          <h3 className="text-xs font-black uppercase text-indigo-950 tracking-wider">{lang === 'LT' ? 'Darbo eiga' : 'Ход работы'}</h3>
+                          
+                          {/* Step Indicators */}
+                          <div className="space-y-2">
+                            
+                            {/* Step 1 */}
+                            <div className={`p-2.5 rounded-lg border transition-all ${
+                              titrationStep === 1 ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-100 bg-slate-50 opacity-70'
+                            }`}>
+                              <div className="flex items-center gap-1.5 mb-0.5">
+                                <span className={`text-[10px] font-bold px-1.5 py-0.2 bg-indigo-600 text-white rounded-full`}>1</span>
+                                <h4 className="font-bold text-xs text-slate-800">{lang === 'LT' ? 'Mėginio paruošimas' : 'Подготовка пробы'}</h4>
+                              </div>
+                              <p className="text-[11px] text-slate-600">{t.step1}</p>
+                              {titrationStep === 1 && (
+                                <button
+                                  onClick={() => setTitrationStep(2)}
+                                  className="mt-1.5 text-[10px] bg-indigo-600 hover:bg-indigo-700 text-white py-1 px-2.5 rounded font-bold transition-all"
+                                >
+                                  {lang === 'LT' ? 'Naudoti pipetę' : 'Набрать пипеткой'}
+                                </button>
+                              )}
+                              {titrationStep > 1 && (
+                                <span className="text-[11px] text-emerald-600 font-bold block mt-1">✓ {t.step1Done}</span>
+                              )}
+                            </div>
+
+                            {/* Step 2 */}
+                            <div className={`p-2.5 rounded-lg border transition-all ${
+                              titrationStep === 2 ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-100 bg-slate-50 opacity-70'
+                            }`}>
+                              <div className="flex items-center gap-1.5 mb-0.5">
+                                <span className={`text-[10px] font-bold px-1.5 py-0.2 bg-indigo-600 text-white rounded-full`}>2</span>
+                                <h4 className="font-bold text-xs text-slate-800">{lang === 'LT' ? 'Indikatorius' : 'Индикатор'}</h4>
+                              </div>
+                              <p className="text-[11px] text-slate-600">{t.step2}</p>
+                              {titrationStep === 2 && (
+                                <button
+                                  onClick={() => {
+                                    setIndicatorAdded(true);
+                                    setTitrationStep(3);
+                                  }}
+                                  className="mt-1.5 text-[10px] bg-indigo-600 hover:bg-indigo-700 text-white py-1 px-2.5 rounded font-bold transition-all"
+                                >
+                                  {lang === 'LT' ? 'Įlašinti fenolftaleino' : 'Добавить фенолфталеин'}
+                                </button>
+                              )}
+                              {titrationStep > 2 && (
+                                <span className="text-[11px] text-emerald-600 font-bold block mt-1">✓ {t.step2Done}</span>
+                              )}
+                            </div>
+
+                            {/* Step 3 */}
+                            <div className={`p-2.5 rounded-lg border transition-all ${
+                              titrationStep === 3 ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-100 bg-slate-50 opacity-70'
+                            }`}>
+                              <div className="flex items-center gap-1.5 mb-0.5">
+                                <span className={`text-[10px] font-bold px-1.5 py-0.2 bg-indigo-600 text-white rounded-full`}>3</span>
+                                <h4 className="font-bold text-xs text-slate-800">{lang === 'LT' ? 'Bureto užpildymas' : 'Заполнение бюретки'}</h4>
+                              </div>
+                              <p className="text-[11px] text-slate-600">{t.step3}</p>
+                              {titrationStep === 3 && (
+                                <button
+                                  onClick={() => setTitrationStep(4)}
+                                  className="mt-1.5 text-[10px] bg-indigo-600 hover:bg-indigo-700 text-white py-1 px-2.5 rounded font-bold transition-all"
+                                >
+                                  {lang === 'LT' ? 'Užpildyti biuretę' : 'Заполнить раствором'}
+                                </button>
+                              )}
+                              {titrationStep > 3 && (
+                                <span className="text-[11px] text-emerald-600 font-bold block mt-1">✓ {t.step3Done}</span>
+                              )}
+                            </div>
+
+                            {/* Step 4 */}
+                            <div className={`p-2.5 rounded-lg border transition-all ${
+                              titrationStep === 4 ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-100 bg-slate-50 opacity-70'
+                            }`}>
+                              <div className="flex items-center gap-1.5 mb-0.5">
+                                <span className="text-[10px] font-bold px-1.5 py-0.2 bg-indigo-600 text-white rounded-full">4</span>
+                                <h4 className="font-bold text-xs text-slate-800">{lang === 'LT' ? 'Titravimas' : 'Титрование'}</h4>
+                              </div>
+                              <p className="text-[11px] text-slate-600">{t.step4}</p>
+                              
+                              {titrationStep === 4 && (
+                                <div className="mt-2 space-y-2">
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={handleTitrateFast}
+                                      className="flex-1 text-[10px] bg-indigo-600 hover:bg-indigo-700 text-white py-1.5 px-2 rounded font-black transition-all"
+                                    >
+                                      {t.titrateBtn}
+                                    </button>
+                                    <button
+                                      onClick={handleTitrateDrop}
+                                      className="flex-1 text-[10px] bg-teal-600 hover:bg-teal-700 text-white py-1.5 px-2 rounded font-black transition-all"
+                                    >
+                                      {t.titrateDropBtn}
+                                    </button>
+                                  </div>
+                                  
+                                  <div className="text-[11px] font-mono bg-white p-1.5 rounded border border-slate-200 mt-1 flex justify-between">
+                                    <span>{t.addedVolume}</span> 
+                                    <strong className="text-indigo-600">{titrantVolume.toFixed(2)} mL</strong>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={resetTitrationLab}
+                          className="mt-4 w-full flex items-center justify-center gap-1.5 border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold py-1.5 px-3 rounded-lg text-xs transition-all"
+                        >
+                          <RefreshCwIcon className="h-5 w-5" />
+                          {t.resetTitration}
+                        </button>
+                      </div>
+
+                      {/* Middle Column: Lab Graphics (Burette + Erlenmeyer Flask) */}
+                      <div className="lg:col-span-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col items-center justify-center relative min-h-[360px]">
+                        
+                        <div className="w-full max-w-[200px] flex flex-col items-center">
+                          
+                          {/* Stand SVG containing Burette and Pipette */}
+                          <svg viewBox="0 0 200 400" className="w-full h-[300px]">
+                            {/* Metal Stand */}
+                            <rect x="25" y="380" width="150" height="12" fill="#475569" rx="3" />
+                            <line x1="150" y1="20" x2="150" y2="380" stroke="#475569" strokeWidth="5" />
+                            
+                            {/* Clamps */}
+                            <rect x="90" y="80" width="60" height="8" fill="#64748b" />
+                            <circle cx="90" cy="84" r="6" fill="#334155" />
+                            <rect x="90" y="210" width="60" height="8" fill="#64748b" />
+                            <circle cx="90" cy="214" r="6" fill="#334155" />
+
+                            {/* --- BURETTE ASSEMBLY --- */}
+                            <g opacity={titrationStep >= 4 ? 1 : 0.2}>
+                              <rect x="80" y="30" width="20" height="230" fill="none" stroke="#94a3b8" strokeWidth="2.5" />
+                              
+                              {/* Scale Indicators */}
+                              {Array.from({ length: 6 }).map((_, idx) => {
+                                const yTick = 40 + idx * 35;
+                                return (
+                                  <line key={idx} x1="80" y1={yTick} x2="88" y2={yTick} stroke="#1e293b" strokeWidth="1.5" />
+                                );
+                              })}
+
+                              {/* Liquid level inside burette */}
+                              {titrationStep >= 4 && (
+                                <g>
+                                  {(() => {
+                                    const visualVolumeFraction = Math.min(titrantVolume / 30.0, 1.0);
+                                    const topLiquidY = 40 + visualVolumeFraction * 160;
+                                    return (
+                                      <rect x="81" y={topLiquidY} width="18" height={259 - topLiquidY} fill="rgba(14, 165, 233, 0.2)" />
+                                    );
+                                  })()}
+                                </g>
+                              )}
+
+                              {/* Valve and Tip */}
+                              <path d="M 85,260 L 85,285 L 95,285 L 95,260 Z" fill="#94a3b8" stroke="#64748b" strokeWidth="1.5" />
+                              <circle cx="90" cy="272" r="5" fill="#ef4444" />
+                              <path d="M 88,285 L 90,305 L 92,305 L 92,285 Z" fill="#94a3b8" stroke="#64748b" />
+                            </g>
+
+                            {/* Droplet Animation */}
+                            {titrationStep === 4 && titrantVolume > 0 && (
+                              <path 
+                                d="M 90,310 C 88,310 86,313 88,316 C 90,318 90,318 90,318 C 90,318 90,318 92,316 C 94,313 92,310 90,310 Z" 
+                                fill="#38bdf8" 
+                                className="animate-bounce"
+                              />
+                            )}
+
+                            {/* --- ERLENMEYER FLASK --- */}
+                            <g transform="translate(40, 280)">
+                              <path d="M 40,20 L 40,40 L 10,95 L 90,95 L 60,40 L 60,20 Z" fill="none" stroke="#64748b" strokeWidth="3" />
+                              
+                              {titrationStep >= 2 ? (
+                                <path 
+                                  d="M 12,93 L 23,70 Q 50,73 77,70 L 88,93 Z" 
+                                  fill={getSolutionColor().liquidColor || 'rgba(14, 165, 233, 0.2)'} 
+                                  className="transition-all duration-300"
+                                />
+                              ) : (
+                                titrationStep === 1 ? null : (
+                                  <path d="M 12,93 L 23,70 Q 50,73 77,70 L 88,93 Z" fill="rgba(241, 245, 249, 0.5)" />
+                                )
+                              )}
+                            </g>
+                          </svg>
+
+                        </div>
+
+                        {/* Display Color Information Panel */}
+                        {titrationStep >= 2 && (
+                          <div className={`mt-2 w-full p-2 rounded-lg border text-center transition-all ${getSolutionColor().bg} ${getSolutionColor().border}`}>
+                            <span className="text-[10px] font-black uppercase block tracking-wider text-slate-500 mb-0.5">{t.solutionColor}</span>
+                            <p className={`text-xs ${getSolutionColor().text}`}>{getSolutionColor().label}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Right Column: Quantitative Calculations & Submitting Results */}
+                      <div className="lg:col-span-4 space-y-4">
+                        
+                        {/* Zoom of Burette Meniscus to read the exact value */}
+                        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                          <h3 className="text-xs font-black uppercase text-indigo-950 tracking-wider flex items-center gap-1">
+                            <LayersIcon className="h-5 w-5 text-indigo-600" />
+                            {lang === 'LT' ? 'Meniu priartinimas (Skaityti čia)' : 'Приближение мениска (Считывать тут)'}
+                          </h3>
+                          <p className="text-[10px] text-rose-600 font-bold mb-2">
+                            {lang === 'LT' ? 'Skaitykite ties apatine menisko kreivės dalimi!' : 'Считывайте строго по нижней (центральной) точке дуги!'}
+                          </p>
+
+                          <div className="bg-slate-50 p-2 rounded-xl border border-slate-100 flex justify-center h-40 relative">
+                            <svg viewBox="0 0 140 160" className="h-full">
+                              {(() => {
+                                const baseVol = Math.floor(titrantVolume);
+                                return (
+                                  <g>
+                                    <rect x="30" y="10" width="80" height="140" fill="none" stroke="#94a3b8" strokeWidth="2.5" />
+                                    
+                                    {/* Subdivisions */}
+                                    {Array.from({ length: 21 }).map((_, i) => {
+                                      const tickValue = baseVol - 0.5 + i * 0.1;
+                                      const yPos = 140 - i * 6.5; 
+                                      const isMajor = Math.abs(tickValue * 10) % 10 === 0;
+                                      const isHalf = Math.abs(tickValue * 10) % 5 === 0;
+                                      
+                                      if (yPos < 10 || yPos > 150) return null;
+
+                                      return (
+                                        <g key={i}>
+                                          <line 
+                                            x1="30" 
+                                            y1={yPos} 
+                                            x2={isMajor ? "65" : (isHalf ? "55" : "45")} 
+                                            y2={yPos} 
+                                            stroke="#1e293b" 
+                                            strokeWidth={isMajor ? "2" : "1"} 
+                                          />
+                                          {isMajor && (
+                                            <text x="73" y={yPos + 4} fill="#1e293b" className="text-[10px] font-black">
+                                              {tickValue.toFixed(1)}
+                                            </text>
+                                          )}
+                                        </g>
+                                      );
+                                    })}
+
+                                    {/* Liquid Meniscus mathematically aligned to targetY at its lowest point */}
+                                    {(() => {
+                                      const diff = titrantVolume - (baseVol - 0.5);
+                                      const targetY = 140 - diff * 65;
+
+                                      return (
+                                        <g>
+                                          {/* Curved blue liquid - lowest point of meniscus is EXACTLY at targetY */}
+                                          <path 
+                                            d={`M 30,150 L 30,${targetY - 15} Q 70,${targetY + 15} 110,${targetY - 15} L 110,150 Z`} 
+                                            fill="rgba(14, 165, 233, 0.2)" 
+                                          />
+                                          {/* Strong meniscus arc */}
+                                          <path 
+                                            d={`M 30,${targetY - 15} Q 70,${targetY + 15} 110,${targetY - 15}`} 
+                                            fill="none" 
+                                            stroke="#0284c7" 
+                                            strokeWidth="4" 
+                                          />
+                                          {/* Tangent dashed helper on zoom */}
+                                          <line 
+                                            x1="10" 
+                                            y1={targetY} 
+                                            x2="120" 
+                                            y2={targetY} 
+                                            stroke="rgba(220, 38, 38, 0.6)" 
+                                            strokeWidth="1" 
+                                            strokeDasharray="2" 
+                                          />
+                                          <circle cx="70" cy={targetY} r="2.5" fill="#dc2626" />
+                                        </g>
+                                      );
+                                    })()}
+                                  </g>
+                                );
+                              })()}
+                            </svg>
+                          </div>
+                        </div>
+
+                        {/* Calculation Verification Panel */}
+                        <div className="bg-indigo-950 text-white p-4 rounded-xl shadow-md space-y-3">
+                          <h3 className="text-sm font-bold text-teal-400">{t.calculateTitle}</h3>
+                          <p className="text-[10px] text-indigo-200 leading-relaxed">{t.calcFormula}</p>
+                          <div className="text-[10px] bg-indigo-900/60 p-2 rounded text-teal-300 font-mono">
+                            {t.knownValues}
+                          </div>
+
+                          <div className="space-y-2">
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="block text-[10px] font-semibold text-indigo-200 mb-0.5">{t.yourReading}</label>
+                                <input
+                                  type="text"
+                                  value={userCalcVolume}
+                                  onChange={(e) => setUserCalcVolume(e.target.value)}
+                                  placeholder="0.00"
+                                  className="w-full bg-indigo-900/40 border border-indigo-700 rounded p-1.5 text-white font-mono text-xs focus:outline-none focus:ring-1 focus:ring-teal-400"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[10px] font-semibold text-indigo-200 mb-0.5">{t.calculatedConc}</label>
+                                <input
+                                  type="text"
+                                  value={userCalcConcentration}
+                                  onChange={(e) => setUserCalcConcentration(e.target.value)}
+                                  placeholder="0.0000"
+                                  className="w-full bg-indigo-900/40 border border-indigo-700 rounded p-1.5 text-white font-mono text-xs focus:outline-none focus:ring-1 focus:ring-teal-400"
+                                />
+                              </div>
+                            </div>
+
+                            <button
+                              onClick={handleCheckCalculation}
+                              className="w-full bg-teal-500 hover:bg-teal-400 text-indigo-950 font-black py-2 px-3 rounded-lg shadow text-xs transition-all"
+                            >
+                              {t.submitCalculation}
+                            </button>
+                          </div>
+
+                          {calcFeedback && (
+                            <div className={`p-2 rounded border text-[10px] flex gap-1.5 ${
+                              calcFeedback.status === 'success' ? 'bg-emerald-500/10 border-emerald-500 text-emerald-200' :
+                              calcFeedback.status === 'error' ? 'bg-amber-500/10 border-amber-500 text-amber-200' :
+                              'bg-rose-500/10 border-rose-500 text-rose-200'
+                            }`}>
+                              {calcFeedback.status === 'success' ? (
+                                <CheckCircleIcon className="h-5 w-5 shrink-0 text-emerald-400" />
+                              ) : (
+                                <AlertCircleIcon className="h-5 w-5 shrink-0 text-rose-400" />
+                              )}
+                              <span>{calcFeedback.msg}</span>
+                            </div>
+                          )}
+                        </div>
+
+                      </div>
+
+                    </div>
+                  </div>
+                )}
+
+
+                {/* --- TAB 4: VBE QUIZ --- */}
+                {activeTab === 'quiz' && (
+                  <div className="space-y-4 animate-fade-in max-w-2xl mx-auto">
+                    
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                      <h2 className="text-lg font-bold text-slate-900 mb-0.5">{t.quizTitle}</h2>
+                      <p className="text-xs text-slate-600 mb-3">{t.quizIntro}</p>
+                      
+                      {/* Progress Indicator */}
+                      <div className="flex justify-between items-center text-xs font-bold text-indigo-600 mb-1.5">
+                        <span>{t.questionOf} {currentQuestionIdx + 1} / {quizQuestions.length}</span>
+                        <span>{t.score} {quizScore} / {quizQuestions.length}</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-indigo-600 transition-all duration-300"
+                          style={{ width: `${((currentQuestionIdx + (quizFinished ? 1 : 0)) / quizQuestions.length) * 100}%` }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    {!quizFinished ? (
+                      <div className="space-y-4">
+                        
+                        {/* Question Card */}
+                        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                          <h3 className="text-sm font-bold text-slate-900 mb-4">
+                            {quizQuestions[currentQuestionIdx].question}
+                          </h3>
+
+                          {/* Options List */}
+                          <div className="space-y-2">
+                            {quizQuestions[currentQuestionIdx].options.map((option, idx) => {
+                              let btnStyles = "border-slate-200 hover:border-indigo-200 hover:bg-indigo-50/10 text-xs p-3";
+                              
+                              if (selectedOption === idx) {
+                                btnStyles = "border-indigo-600 bg-indigo-50/40 font-semibold text-xs p-3";
+                              }
+                              
+                              if (isAnswerSubmitted) {
+                                if (idx === quizQuestions[currentQuestionIdx].answer) {
+                                  btnStyles = "border-emerald-500 bg-emerald-50 text-emerald-950 font-bold text-xs p-3";
+                                } else if (selectedOption === idx) {
+                                  btnStyles = "border-rose-300 bg-rose-50 text-rose-950 text-xs p-3";
+                                } else {
+                                  btnStyles = "border-slate-100 opacity-40 text-xs p-3";
+                                }
+                              }
+
+                              return (
+                                <button
+                                  key={idx}
+                                  onClick={() => handleOptionSelect(idx)}
+                                  disabled={isAnswerSubmitted}
+                                  className={`w-full text-left rounded-lg border transition-all flex items-center justify-between ${btnStyles}`}
+                                >
+                                  <span>{option}</span>
+                                  {isAnswerSubmitted && idx === quizQuestions[currentQuestionIdx].answer && (
+                                    <CheckCircleIcon className="h-5 w-5 text-emerald-600 shrink-0" />
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {/* Feedback Explanation */}
+                          {isAnswerSubmitted && (
+                            <div className="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200 text-xs leading-relaxed">
+                              <p className={`font-bold mb-1.5 flex items-center gap-1.5 ${
+                                selectedOption === quizQuestions[currentQuestionIdx].answer ? 'text-emerald-700' : 'text-rose-700'
+                              }`}>
+                                {selectedOption === quizQuestions[currentQuestionIdx].answer ? (
+                                  <>
+                                    <CheckCircleIcon className="h-5 w-5" />
+                                    {t.correct}
+                                  </>
+                                ) : (
+                                  <>
+                                    <AlertCircleIcon className="h-5 w-5" />
+                                    {t.incorrect} {quizQuestions[currentQuestionIdx].options[quizQuestions[currentQuestionIdx].answer]}
+                                  </>
+                                )}
+                              </p>
+                              <p className="text-slate-600">
+                                <strong>{t.explanation}</strong> {quizQuestions[currentQuestionIdx].explanation}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Navigation Button */}
+                          <div className="mt-4 flex justify-end">
+                            {!isAnswerSubmitted ? (
+                              <button
+                                onClick={handleSubmitQuizAnswer}
+                                disabled={selectedOption === null}
+                                className={`py-2 px-5 rounded-lg font-bold shadow transition-all text-xs ${
+                                  selectedOption !== null 
+                                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
+                                    : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                                }`}
+                              >
+                                {t.checkAnswer}
+                              </button>
+                            ) : (
+                              <button
+                                onClick={handleNextQuestion}
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-5 rounded-lg font-bold shadow transition-all flex items-center gap-1 text-xs"
+                              >
+                                {t.nextQuestion}
+                                <ChevronRightIcon className="h-5 w-5" />
+                              </button>
+                            )}
+                          </div>
+
+                        </div>
+
+                      </div>
+                    ) : (
+                      // Quiz Complete Screen
+                      <div className="bg-indigo-950 text-white p-6 rounded-xl shadow-md text-center space-y-4">
+                        <div className="w-12 h-12 bg-teal-400 text-indigo-950 rounded-full flex items-center justify-center mx-auto shadow">
+                          <AwardIcon className="h-5 w-5" />
+                        </div>
+                        
+                        <h3 className="text-lg font-bold">{lang === 'LT' ? 'Testas užbaigtas!' : 'Тест пройден!'}</h3>
+                        <p className="text-indigo-200 text-sm">
+                          {t.quizFinished} <strong className="text-teal-400">{quizScore} / {quizQuestions.length}</strong>
+                        </p>
+
+                        <div className="p-3 bg-indigo-900/60 rounded-lg max-w-md mx-auto border border-indigo-800 text-xs leading-relaxed text-indigo-200">
+                          {quizScore === quizQuestions.length 
+                            ? (lang === 'LT' ? "Sveikiname! Puikus rezultatas. Jūs puikiai išmanote VBE laboratorinės technikos reikalavimus!" : "Поздравляем! Отличный результат. Вы безупречно разбираетесь в требованиях VBE к лабораторной посуде!")
+                            : (lang === 'LT' ? "Geras bandymas. Rekomenduojame dar kartą peržiūrėti teorijos korteles ir pasitreniruoti su skalėmis." : "Хорошая попытка. Рекомендуем еще раз перечитать теоретические карточки и попрактиковаться со считыванием шкал.")}
+                        </div>
+
+                        <button
+                          onClick={handleRestartQuiz}
+                          className="bg-teal-500 hover:bg-teal-400 text-indigo-950 font-bold py-2 px-5 rounded-lg shadow transition-all inline-flex items-center gap-1.5 text-xs"
+                        >
+                          <RefreshCwIcon className="h-5 w-5" />
+                          {t.restartQuiz}
+                        </button>
+                      </div>
+                    )}
+
+                  </div>
+                )}
+
+              </main>
+
+              {/* --- FOOTER --- */}
+              <footer className="max-w-6xl mx-auto px-4 mt-8 border-t border-slate-200 pt-4 text-center text-[10px] text-slate-500">
+                <p>© 2026 VBE Chemijos Indų Simuliatorius. Skirta efektyviam pasiruošimui chemijos valstybiniam egzaminui.</p>
+                <p className="mt-0.5">Designed for academic excellence & experimental rigor.</p>
+              </footer>
+            </div>
+          );
+        }
+
+        // Рендеринг приложения React в корневой элемент
+        const root = document.getElementById('root');
+        const reactRoot = ReactDOM.createRoot(root);
+        reactRoot.render(<App />);
+    </script>
+</body>
+</html>
